@@ -1,0 +1,236 @@
+---
+title: "Repressions against residents of Kryvyi Rih, 1937–1938"
+output:
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{css, echo=FALSE}
+body, .main-container, .container-fluid,
+div, section, article, p, hr {
+  background-color: #f5f0e8;
+}
+.main-container {
+  max-width: 100%;
+  padding: 4rem 6rem;
+}
+.plot-container, img, .html-widget, canvas {
+  background-color: #f5f0e8 !important;
+  border: none !important;
+  outline: none !important;
+}
+```
+
+```{r, fig.width=14, fig.height=9}
+library(tidyverse)
+library(ggimage)
+library(patchwork)
+library(showtext)
+library(ggtext)
+library(waffle)
+library(here)
+
+# --- fonts ---
+font_add_google("IBM Plex Sans", "plex")
+showtext_auto()
+showtext_opts(dpi = 300)
+
+# --- palette ---
+col_ink <- "#1a1a1a"
+col_paper <- "#f5f0e8"
+col_red <- "#c0392b"
+
+# --- shared theme ---
+theme_repression <- function() {
+  theme_minimal(base_family = "plex") +
+    theme(
+      plot.background = element_rect(fill = col_paper, color = NA),
+      panel.background = element_rect(fill = col_paper, color = NA),
+      panel.grid.major.x = element_blank(),
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.title = element_text(
+        family = "plex", size = 13,
+        face = "bold", color = col_ink,
+        margin = margin(b = 4)
+      ),
+      plot.subtitle = element_text(
+        family = "plex", size = 11,
+        color = col_ink, margin = margin(b = 10)
+      ),
+      axis.text = element_text(size = 10, color = col_ink),
+      axis.title = element_blank(),
+      plot.margin = margin(12, 16, 12, 12)
+    )
+}
+
+# ============================================================
+# PANEL 1: barbed wire charges bar chart
+# ============================================================
+charges <- read_csv(here("data/charges.csv")) %>%
+  mutate(
+    is_espionage = str_detect(charge, "[Ee]spionage|[Ss]py"),
+    charge = str_wrap(charge, 30),
+    charge = fct_reorder(charge, n),
+    charge = fct_relevel(charge,
+      "Other (18 further charges)",
+      "Unknown",
+      after = 0
+    )
+  )
+
+wire_plain <- here("figs/Barbed_wire.png")
+wire_red <- here("figs/Barbed_wire_red.png")
+
+knot_data <- charges %>%
+  mutate(img = if_else(is_espionage, wire_red, wire_plain)) %>%
+  rowwise() %>%
+  mutate(x_pos = list(seq(3, n, by = 38))) %>%
+  ungroup() %>%
+  unnest(x_pos)
+
+p1 <- ggplot(charges, aes(x = n, y = charge)) +
+  geom_segment(
+    aes(x = 0, xend = n, y = charge, yend = charge, color = is_espionage),
+    linewidth = 0.7
+  ) +
+  scale_color_manual(values = c("TRUE" = col_red, "FALSE" = col_ink), guide = "none") +
+  geom_image(
+    data = knot_data,
+    aes(x = x_pos, y = charge, image = img),
+    size = 0.028
+  ) +
+  geom_text(
+    aes(label = n, color = is_espionage),
+    hjust = -0.4, size = 3.5, family = "plex"
+  ) +
+  annotate(
+    "richtext",
+    x = 200, y = 6.5,
+    label = paste0("<span style='color:", col_red, "'>**31% faced espionage charges**</span><br>most were workers with no access<br>to any state secrets"),
+    hjust = 0, size = 3.5, family = "plex",
+    fill = NA, label.color = NA, color = col_ink
+  ) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0, 0.3)),
+    breaks = c(0, 100, 200, 300)
+  ) +
+  coord_cartesian(clip = "off") +
+  labs(
+    title    = "Charges",
+    subtitle = "With 1,878 of documented cases, the true number is estimated to be at least 20% higher"
+  ) +
+  theme_repression() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(margin = margin(r = 14)),
+    plot.title = element_text(hjust = -0.33),
+    plot.subtitle = element_text(hjust = -2.91)
+  )
+
+# ============================================================
+# PANEL 2: waffle chart — sentences
+# ============================================================
+
+sentences <- read_csv(here("data/sentences.csv"))
+
+verdict_order <- c(
+  "Executed",
+  "Labor camp (10 years)",
+  "Labor camp (8-9 years)",
+  "Labor camp (6-7 years)",
+  "Labor camp (3-5 years)",
+  "Exile / deportation",
+  "Other",
+  "Unknown"
+)
+
+waffle_colors <- c(
+  "Executed"               = col_red,
+  "Labor camp (10 years)"  = "#3a3a3a",
+  "Labor camp (8-9 years)" = "#626262",
+  "Labor camp (6-7 years)" = "#8a8a8a",
+  "Labor camp (3-5 years)" = "#b2b2b2",
+  "Exile / deportation"    = "#c4c0f0",
+  "Other"                  = "#7f77dd",
+  "Unknown"                = "#9f99e0"
+)
+
+waffle_counts <- sentences %>%
+  mutate(verdict = factor(verdict, levels = verdict_order)) %>%
+  arrange(verdict) %>%
+  mutate(sq = pmax(round(pct), 1)) %>%
+  {
+    df <- .
+    df$sq[1] <- df$sq[1] + (100 - sum(df$sq))
+    df
+  } %>%
+  pull(sq, name = verdict) %>%
+  rev()
+
+p2 <- waffle(
+  waffle_counts,
+  rows       = 5,
+  colors     = waffle_colors[names(waffle_counts)],
+  size       = 0.3,
+  legend_pos = "right",
+  flip       = TRUE,
+  pad        = 0
+) +
+  scale_fill_manual(
+    values = waffle_colors,
+    breaks = verdict_order
+  ) +
+  labs(
+    title    = "Sentences",
+    subtitle = "Each square ≈ 19 people"
+  ) +
+  guides(fill = guide_legend(ncol = 1)) +
+  theme_repression() +
+  theme(
+    plot.title = element_text(hjust = 0.06),
+    plot.subtitle = element_text(hjust = 0.15),
+    legend.position = "right",
+    legend.text = element_text(size = 10, color = col_ink, family = "plex"),
+    legend.key.height = unit(1, "cm"),
+    legend.key.width = unit(1, "cm"),
+    legend.title = element_blank(),
+    legend.margin = margin(t = -352),
+    legend.background = element_rect(fill = col_paper, color = NA),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.ticks.length = unit(0, "pt"),
+    panel.background = element_rect(fill = col_paper, color = NA),
+    plot.margin = margin(12, 16, 12, 0)
+  )
+
+# ============================================================
+# COMPOSE
+# ============================================================
+
+(p1 | p2) +
+  plot_layout(widths = c(3, 1)) &
+  theme(
+    plot.background = element_rect(fill = col_paper, color = NA),
+    panel.border = element_blank()
+  )
+```
+
+---
+
+<div style="display:flex; justify-content:flex-end; font-size:0.8em; color:#666; margin-top:20px;">
+  <table style="border-collapse:collapse; text-align:left;">
+    <tr>
+      <td style="font-weight:bold; padding-right:12px; white-space:nowrap; vertical-align:top;">Data source</td>
+      <td>Melnyk, Oleksandr. 2017. <em>Repressions of 1937–1938 in Kryvyi Rih</em>. Kryvyi Rih City Museum of Local History and Studies.</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold; padding-right:12px; white-space:nowrap; vertical-align:top;">Visualisation</td>
+      <td>Olena Tykhostup &middot; <a href="https://github.com/Olena-Tykhostup/kryvyi-rih-repressions-1937-38" style="color:#666;">github.com/Olena-Tykhostup/kryvyi-rih-repressions-1937-38</a></td>
+    </tr>
+  </table>
+</div>
