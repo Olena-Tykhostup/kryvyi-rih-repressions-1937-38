@@ -165,8 +165,8 @@ person_counts <- sentences %>%
 n_icons <- sum(person_counts) # 99
 n_cols <- 7L
 n_rows <- ceiling(n_icons / n_cols) # 15
-x_gap <- 1.5 # horizontal spacing multiplier
-y_gap <- 1.5 # vertical spacing multiplier
+x_gap <- 1.9 # horizontal spacing multiplier
+y_gap <- 1.9 # vertical spacing multiplier
 
 person_grid <- tibble(
   verdict = rep(verdict_order, times = person_counts[verdict_order])
@@ -180,12 +180,10 @@ person_grid <- tibble(
 
 legend_df <- tibble(
   verdict = factor(verdict_order, levels = verdict_order),
-  img = person_imgs[verdict_order],
-  x = seq(1, (n_cols - 1) * x_gap + 1, length.out = 5),
-  y = -0.8,
-  label = verdict_order %>%
-    str_replace(" \\(", "\n(") %>%
-    str_replace("/ ", "/\n")
+  img     = person_imgs[verdict_order],
+  x       = 1,
+  y       = seq(-1.5, by = -2.5, length.out = 5),
+  label   = verdict_order
 )
 
 p2 <- ggplot(person_grid, aes(x = x, y = y)) +
@@ -193,12 +191,12 @@ p2 <- ggplot(person_grid, aes(x = x, y = y)) +
   geom_image(data = legend_df, aes(x = x, y = y, image = img), size = 0.044) +
   geom_text(
     data = legend_df,
-    aes(x = x, y = y - 0.9, label = label),
-    hjust = 1, vjust = 0.5, angle = 90,
-    size = 5.6, family = "plex", color = col_ink, lineheight = 0.85
+    aes(x = x + 1.0, y = y, label = label),
+    hjust = 0, vjust = 0.5,
+    size = 5.6, family = "plex", color = col_ink
   ) +
-  scale_x_continuous(limits = c(1 - x_gap * 0.5, (n_cols - 1) * x_gap + 1 + x_gap * 1.2), expand = expansion(0)) +
-  scale_y_continuous(limits = c(-8, n_rows * y_gap + y_gap * 0.5), expand = expansion(0)) +
+  scale_x_continuous(limits = c(1 - x_gap * 0.5, (n_cols - 1) * x_gap + 1 + x_gap * 2.5), expand = expansion(0)) +
+  scale_y_continuous(limits = c(-14, n_rows * y_gap + y_gap * 0.5), expand = expansion(0)) +
   coord_fixed(clip = "off") +
   labs(
     title    = "Sentences",
