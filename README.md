@@ -16,7 +16,7 @@ The article documents 1,878 cases of political repression during the Great Terro
 
 ## Preview
 
-[View interactive chart](https://htmlpreview.github.io/?https://github.com/Olena-Tykhostup/kryvyi-rih-repressions-1937-38/blob/main/output/plot_charges.html)
+[View chart](https://htmlpreview.github.io/?https://github.com/Olena-Tykhostup/kryvyi-rih-repressions-1937-38/blob/main/output/plot_charges.html)
 
 ## Key findings
 
