@@ -1,5 +1,6 @@
 ---
 title: "Repressions against residents of Kryvyi Rih, 1937–1938"
+subtitle: "City population at the time ≈ 197,600"
 output:
   html_document:
     self_contained: true
