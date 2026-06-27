@@ -17,12 +17,15 @@ div, section, article, p, hr {
 }
 .main-container {
   max-width: 100%;
-  padding: 20rem 20rem;
+  padding: 20rem 15rem;
 }
 .plot-container, img, .html-widget, canvas {
   background-color: #f5f0e8 !important;
   border: none !important;
   outline: none !important;
+}
+h3.subtitle, .subtitle {
+  font-size: 1.1em;
 }
 ```
 
@@ -96,13 +99,13 @@ knot_data <- charges %>%
 p1 <- ggplot(charges, aes(x = n, y = charge)) +
   geom_segment(
     aes(x = 0, xend = n, y = charge, yend = charge, color = is_espionage),
-    linewidth = 0.7
+    linewidth = 1.4
   ) +
   scale_color_manual(values = c("TRUE" = col_red, "FALSE" = col_ink), guide = "none") +
   geom_image(
     data = knot_data,
     aes(x = x_pos, y = charge, image = img),
-    size = 0.028
+    size = 0.04
   ) +
   geom_text(
     aes(label = n, color = is_espionage),
