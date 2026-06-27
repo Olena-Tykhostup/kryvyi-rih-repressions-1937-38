@@ -14,6 +14,10 @@ The article documents 1,878 cases of political repression during the Great Terro
 - `code/` — script for visualizing the data
 - `output/` — exported html
 
+## Preview
+
+[View interactive chart](https://htmlpreview.github.io/?https://github.com/Olena-Tykhostup/kryvyi-rih-repressions-1937-38/blob/main/output/plot_charges.html)
+
 ## Key findings
 
 - 73.9% of documented victims were executed
