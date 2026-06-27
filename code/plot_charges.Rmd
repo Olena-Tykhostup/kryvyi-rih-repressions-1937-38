@@ -1,6 +1,6 @@
 ---
 title: "Repressions against residents of Kryvyi Rih, 1937–1938"
-subtitle: "City population at the time ≈ 197,600"
+subtitle: "City population at the time ≈ 197,000<br>With 1,878 documented cases of repressions, the true number is estimated to be at least 20% higher"
 output:
   html_document:
     self_contained: true
@@ -17,7 +17,7 @@ div, section, article, p, hr {
 }
 .main-container {
   max-width: 100%;
-  padding: 4rem 6rem;
+  padding: 20rem 20rem;
 }
 .plot-container, img, .html-widget, canvas {
   background-color: #f5f0e8 !important;
@@ -32,7 +32,6 @@ library(ggimage)
 library(patchwork)
 library(showtext)
 library(ggtext)
-library(waffle)
 library(here)
 
 # --- fonts ---
@@ -55,15 +54,15 @@ theme_repression <- function() {
       panel.grid.major.y = element_blank(),
       panel.grid.minor = element_blank(),
       plot.title = element_text(
-        family = "plex", size = 13,
+        family = "plex", size = 26,
         face = "bold", color = col_ink,
         margin = margin(b = 4)
       ),
       plot.subtitle = element_text(
-        family = "plex", size = 11,
+        family = "plex", size = 22, face = "bold",
         color = col_ink, margin = margin(b = 10)
       ),
-      axis.text = element_text(size = 10, color = col_ink),
+      axis.text = element_text(size = 20, color = col_ink),
       axis.title = element_blank(),
       plot.margin = margin(12, 16, 12, 12)
     )
@@ -107,14 +106,7 @@ p1 <- ggplot(charges, aes(x = n, y = charge)) +
   ) +
   geom_text(
     aes(label = n, color = is_espionage),
-    hjust = -0.4, size = 3.5, family = "plex"
-  ) +
-  annotate(
-    "richtext",
-    x = 200, y = 6.5,
-    label = paste0("<span style='color:", col_red, "'>**31% faced espionage charges**</span><br>most were workers with no access<br>to any state secrets"),
-    hjust = 0, size = 3.5, family = "plex",
-    fill = NA, label.color = NA, color = col_ink
+    hjust = -0.4, size = 7, family = "plex"
   ) +
   scale_x_continuous(
     expand = expansion(mult = c(0, 0.3)),
@@ -123,90 +115,102 @@ p1 <- ggplot(charges, aes(x = n, y = charge)) +
   coord_cartesian(clip = "off") +
   labs(
     title    = "Charges",
-    subtitle = "With 1,878 of documented cases, the true number is estimated to be at least 20% higher"
+    subtitle = paste0("<span style='color:", col_red, "'>31% faced espionage charges</span><br>Most were workers with no access to any state secrets")
   ) +
   theme_repression() +
   theme(
     axis.text.x = element_blank(),
     axis.text.y = element_text(margin = margin(r = 14)),
-    plot.title = element_text(hjust = -0.33),
-    plot.subtitle = element_text(hjust = -2.91)
+    plot.title = element_text(hjust = -0.82),
+    plot.subtitle = element_markdown(hjust = 3.45, halign = 0, face = "bold")
   )
 
 # ============================================================
-# PANEL 2: waffle chart — sentences
+# PANEL 2: person grid — sentences
 # ============================================================
 
-sentences <- read_csv(here("data/sentences.csv"))
+sentences <- read_csv(here("data/sentences_5cat.csv"))
 
 verdict_order <- c(
   "Executed",
-  "Labor camp (10 years)",
-  "Labor camp (8-9 years)",
-  "Labor camp (6-7 years)",
-  "Labor camp (3-5 years)",
-  "Exile / deportation",
-  "Other",
-  "Unknown"
+  "Labor camp (8-10 years)",
+  "Labor camp (3-7 years)",
+  "Other / Unknown",
+  "Exile / deportation"
 )
 
-waffle_colors <- c(
-  "Executed"               = col_red,
-  "Labor camp (10 years)"  = "#3a3a3a",
-  "Labor camp (8-9 years)" = "#626262",
-  "Labor camp (6-7 years)" = "#8a8a8a",
-  "Labor camp (3-5 years)" = "#b2b2b2",
-  "Exile / deportation"    = "#c4c0f0",
-  "Other"                  = "#7f77dd",
-  "Unknown"                = "#9f99e0"
+person_imgs <- c(
+  "Executed" = here("figs/Person_red.png"),
+  "Labor camp (8-10 years)" = here("figs/Person_dark_grey.png"),
+  "Labor camp (3-7 years)" = here("figs/Person_light_grey.png"),
+  "Other / Unknown" = here("figs/Person_dark_purple.png"),
+  "Exile / deportation" = here("figs/Person_light_purple.png")
 )
 
-waffle_counts <- sentences %>%
+icon_scale <- 19L
+
+person_counts <- sentences %>%
   mutate(verdict = factor(verdict, levels = verdict_order)) %>%
   arrange(verdict) %>%
-  mutate(sq = pmax(round(pct), 1)) %>%
-  {
-    df <- .
-    df$sq[1] <- df$sq[1] + (100 - sum(df$sq))
-    df
-  } %>%
-  pull(sq, name = verdict) %>%
-  rev()
+  mutate(icons = pmax(round(n / icon_scale), 1L)) %>%
+  mutate(icons = if_else(row_number() == 1L,
+    icons + (round(sum(n) / icon_scale) - sum(icons)),
+    icons
+  )) %>%
+  pull(icons, name = verdict)
 
-p2 <- waffle(
-  waffle_counts,
-  rows       = 5,
-  colors     = waffle_colors[names(waffle_counts)],
-  size       = 0.3,
-  legend_pos = "right",
-  flip       = TRUE,
-  pad        = 0
-) +
-  scale_fill_manual(
-    values = waffle_colors,
-    breaks = verdict_order
+n_icons <- sum(person_counts) # 99
+n_cols <- 7L
+n_rows <- ceiling(n_icons / n_cols) # 15
+x_gap <- 1.5 # horizontal spacing multiplier
+y_gap <- 1.5 # vertical spacing multiplier
+
+person_grid <- tibble(
+  verdict = rep(verdict_order, times = person_counts[verdict_order])
+) %>%
+  mutate(
+    idx = row_number(),
+    x   = (idx - 1L) %% n_cols * x_gap + 1,
+    y   = (n_rows - (idx - 1L) %/% n_cols) * y_gap,
+    img = person_imgs[as.character(verdict)]
+  )
+
+legend_df <- tibble(
+  verdict = factor(verdict_order, levels = verdict_order),
+  img = person_imgs[verdict_order],
+  x = seq(1, (n_cols - 1) * x_gap + 1, length.out = 5),
+  y = -0.8,
+  label = verdict_order %>%
+    str_replace(" \\(", "\n(") %>%
+    str_replace("/ ", "/\n")
+)
+
+p2 <- ggplot(person_grid, aes(x = x, y = y)) +
+  geom_image(aes(image = img), size = 0.044) +
+  geom_image(data = legend_df, aes(x = x, y = y, image = img), size = 0.044) +
+  geom_text(
+    data = legend_df,
+    aes(x = x, y = y - 0.9, label = label),
+    hjust = 1, vjust = 0.5, angle = 90,
+    size = 5.6, family = "plex", color = col_ink, lineheight = 0.85
   ) +
+  scale_x_continuous(limits = c(1 - x_gap * 0.5, (n_cols - 1) * x_gap + 1 + x_gap * 1.2), expand = expansion(0)) +
+  scale_y_continuous(limits = c(-8, n_rows * y_gap + y_gap * 0.5), expand = expansion(0)) +
+  coord_fixed(clip = "off") +
   labs(
     title    = "Sentences",
-    subtitle = "Each square ≈ 19 people"
+    subtitle = paste0("Each figure<br>≈", icon_scale, " people")
   ) +
-  guides(fill = guide_legend(ncol = 1)) +
   theme_repression() +
   theme(
-    plot.title = element_text(hjust = 0.06),
-    plot.subtitle = element_text(hjust = 0.15),
-    legend.position = "right",
-    legend.text = element_text(size = 10, color = col_ink, family = "plex"),
-    legend.key.height = unit(1, "cm"),
-    legend.key.width = unit(1, "cm"),
-    legend.title = element_blank(),
-    legend.margin = margin(t = -352),
-    legend.background = element_rect(fill = col_paper, color = NA),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
+    plot.title        = element_text(hjust = 0),
+    plot.subtitle     = element_markdown(hjust = 0, face = "bold"),
+    legend.position   = "none",
+    axis.text         = element_blank(),
+    axis.ticks        = element_blank(),
     axis.ticks.length = unit(0, "pt"),
-    panel.background = element_rect(fill = col_paper, color = NA),
-    plot.margin = margin(12, 16, 12, 0)
+    panel.background  = element_rect(fill = col_paper, color = NA),
+    plot.margin       = margin(0, 16, 12, 0)
   )
 
 # ============================================================
@@ -214,7 +218,7 @@ p2 <- waffle(
 # ============================================================
 
 (p1 | p2) +
-  plot_layout(widths = c(3, 1)) &
+  plot_layout(widths = c(5, 2)) &
   theme(
     plot.background = element_rect(fill = col_paper, color = NA),
     panel.border = element_blank()
@@ -227,7 +231,7 @@ p2 <- waffle(
   <table style="border-collapse:collapse; text-align:left;">
     <tr>
       <td style="font-weight:bold; padding-right:12px; white-space:nowrap; vertical-align:top;">Data source</td>
-      <td>Melnyk, Oleksandr. 2017. <em>Repressions of 1937–1938 in Kryvyi Rih</em>. Kryvyi Rih City Museum of Local History and Studies.</td>
+      <td>Melnyk, Oleksandr. 2017. <em>Repressions of 1937–1938 in Kryvyi Rih</em>. Kryvorizhzhia: A Look into the Past.</td>
     </tr>
     <tr>
       <td style="font-weight:bold; padding-right:12px; white-space:nowrap; vertical-align:top;">Visualisation</td>
